@@ -121,7 +121,7 @@ static inline uint8_t _polyline_encode_number(char *chunks, int64_t number) {
 	}
 	chunks[i++] = number + 63;
 	dbg("%u encoded chunks\n", i);
-	dbg("chunks: %s\n", chunks);
+	dbg("chunks: '%s'\n", chunks);
 	dbg("/_polyline_encode_number\n");
 	return i;
 }
@@ -144,6 +144,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	char *chunks =
 	    malloc(MAX_ENCODED_CHUNKS(precision) * 2 * len * sizeof(char));
 	size_t chunks_index = 0;
+	dbg("ary.len: %lu\n", len);
 	for (i = 0; i < len; i++) {
 		current_pair = PyList_GetItem(ary, i);
 		uint8_t j;
@@ -179,12 +180,11 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 			chunks_index += _polyline_encode_number(
 			    chunks + chunks_index * sizeof(char), delta);
 		}
-		PyObject *polyline = PyUnicode_FromStringAndSize(chunks, chunks_index);
-		free(chunks);
-		return polyline;
 	}
 
-	return PyUnicode_FromString("TODO: Implement polyline_encode");
+	PyObject *polyline = PyUnicode_FromStringAndSize(chunks, chunks_index);
+	free(chunks);
+	return polyline;
 }
 
 static PyMethodDef methods[] = {
