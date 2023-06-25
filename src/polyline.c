@@ -1,6 +1,11 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+/* # Resources
+ *
+ * [Python C-API reference](https://docs.python.org/3/c-api/index.html).
+ */
+
 /*
  * TODO: allow usage both of list and tuple.
  * TODO: handle errors correctly

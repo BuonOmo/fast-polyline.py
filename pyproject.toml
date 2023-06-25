@@ -7,4 +7,5 @@ version = "1.0.0"
 [project.optional-dependencies]
 dev = [
     "polyline~=2.0",
+    "pylint"
 ]

@@ -1,8 +1,12 @@
-import polyline
-import fast_polyline
-import timeit
+"""
+Benchmark to compare with existing libraries.
+"""
 import sys
-from itertools import repeat
+import timeit
+
+import polyline
+
+import fast_polyline
 
 POLYLINE = "{leiHkmjM}z@vcE~JlKx@b~A~Jpy@vv@bhArLpVxFta@sCjEbL~c@rEn{@_HzXj" \
            "EdUg@rfCbHbSp\\fKpQzSg@|fCxTfvAzZduEyC|z@al@l~BcOnzBr@jUfuDfgFf" \
@@ -22,20 +26,26 @@ POINTS = [
 	(48.76883, 2.06241), (48.765, 2.06846)
 ]
 
-# Puts a Centered, bold and inverted text for better visibility.
-def h1(string):
-	if sys.stdout.isatty():
-		print('\n\033[7;1m{}\033[27;0m\n'.format(string.center(75)))
-	else:
-		print('\n# {}\n'.format(string))
-
 def bench(title, method, arg):
-	h1(title)
-	fp_ms = 1_000 * timeit.timeit(lambda: getattr(fast_polyline, method)(arg), number=1_000)
-	p_ms = 1_000 * timeit.timeit(lambda: getattr(polyline, method)(arg), number=1_000)
-	print('fast_polyline: {:.3}ms'.format(fp_ms), sep='\t')
-	print('polyline: {:.3}ms'.format(p_ms), sep='\t')
-	print('fast_polyline is {:.3} times faster.'.format(p_ms / fp_ms))
+	"""
+	Run the comparison and print the results.
+	"""
+	is_tty = sys.stdout.isatty()
+	if is_tty:
+		print(f'\n\033[7;1m{title.center(75)}\033[27;0m\n')
+	else:
+		print(f'\n# {title}\n')
+
+	fp_ms = 1_000 * timeit.timeit(lambda: getattr(fast_polyline, method)(arg), number=10_000)
+	p_ms = 1_000 * timeit.timeit(lambda: getattr(polyline, method)(arg), number=10_000)
+
+	if not is_tty:
+		print('```')
+	print(f'fast_polyline:\t{fp_ms:.5}ms')
+	print(f'polyline:\t{p_ms:.5}ms')
+	print(f'fast_polyline is {p_ms / fp_ms:.3} times faster.')
+	if not is_tty:
+		print('```')
 
 bench('encode', 'encode', POINTS)
 bench('decode', 'decode', POLYLINE)
