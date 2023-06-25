@@ -192,6 +192,6 @@ static PyMethodDef methods[] = {
     {"encode", polyline_encode, METH_VARARGS, "Encode a polyline"},
     {NULL, NULL, 0, NULL}};
 
-static struct PyModuleDef module = {PyModuleDef_HEAD_INIT, "polyline",
+static struct PyModuleDef module = {PyModuleDef_HEAD_INIT, "fast_polyline",
                                     "Encode and decode polylines", -1, methods};
-PyMODINIT_FUNC PyInit_polyline(void) { return PyModule_Create(&module); }
+PyMODINIT_FUNC PyInit_fast_polyline(void) { return PyModule_Create(&module); }
