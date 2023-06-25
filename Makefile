@@ -1,6 +1,10 @@
 .PHONY: install
 install:
-	python3 -m pip install -e .
+	python3 -m pip install -e .[dev]
+
+.PHONY: bench
+bench:
+	@python3 perf/benchmark.py
 
 .PHONY: configure
 setup-clang:
@@ -9,7 +13,7 @@ setup-clang:
 	)" > .clangd
 
 .PHONY: console
-console: install
+console:
 	python3 -ic 'import fast_polyline'
 
 .PHONY: clean

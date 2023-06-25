@@ -1,0 +1,10 @@
+[project]
+name = "fast_polyline"
+description = "Fast & Easy Google Polylines"
+authors = [{name ="Ulysse Buonomo"}]
+version = "1.0.0"
+
+[project.optional-dependencies]
+dev = [
+    "polyline~=2.0",
+]
