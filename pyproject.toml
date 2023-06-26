@@ -2,10 +2,19 @@
 name = "fast_polyline"
 description = "Fast & Easy Google Polylines"
 authors = [{name ="Ulysse Buonomo"}]
-version = "1.0.0"
+version = "0.0.0"
 
 [project.optional-dependencies]
 dev = [
     "polyline~=2.0",
-    "pylint"
+    "pylint",
+    "commitizen"
 ]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
