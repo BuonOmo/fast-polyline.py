@@ -7,17 +7,12 @@
  */
 
 /*
- * TODO: allow usage both of list and tuple.
- * TODO: handle errors correctly
- *.  - The Py*Check functions seems not to set the error message. Pedantic
- *python...
- * TODO: fix core of both functions
- *   - not all of the polyline is given, it seems trunked.
- * TODO: benchmark
  * TODO: readme (.rst???)
  * TODO: inline documentation, however it works in C Python.
  * TODO: test
+ *   - check that error messages are set.
  * TODO: offer merging with the existing polyline project
+ *   https://github.com/frederickjansen/polyline/issues/14
  * TODO: choose final naming (- or _ depending on how they do in python)
  */
 
@@ -54,6 +49,8 @@ static inline double _fast_pow10(uint precision) {
 	return lookup[precision];
 }
 
+// Ensure that precision is between 0 and 13, set error string
+// otherwise.
 static inline int _check_precision(int precision) {
 	if (precision > MAX_PRECISION) {
 		PyErr_SetString(PyExc_ValueError,
@@ -68,11 +65,24 @@ static inline int _check_precision(int precision) {
 	return 1;
 }
 
+// Wrapper around PyArg_ParseTuple that sets an error message.
+static inline int _check_args(PyObject *args, const char *fmt, ...) {
+	// Passing through variadic arguments is not that easy in C.
+	// Here's some information on the topic:
+	// https://c-faq.com/varargs/handoff.html
+	va_list argp;
+	va_start(argp, fmt);
+	int ret = PyArg_VaParse(args, fmt, argp);
+	va_end(argp);
+	if (!ret) PyErr_SetString(PyExc_ValueError, "invalid arguments");
+	return ret;
+}
+
 // polyline.decode(polyline, precision=5)
 static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 	const char *polyline;
 	int precision = DEFAULT_PRECISION;
-	if (!PyArg_ParseTuple(args, "s|i", &polyline, &precision)) return NULL;
+	if (!_check_args(args, "s|i", &polyline, &precision)) return NULL;
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
 	PyObject *ary = PyList_New(0);
@@ -136,10 +146,13 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	PyObject *ary;
 	// Dynamically checked for [0; 13] inclusion.
 	int precision = DEFAULT_PRECISION;
-	if (!PyArg_ParseTuple(args, "O|i", &ary, &precision)) return NULL;
+	if (!_check_args(args, "O|i", &ary, &precision)) return NULL;
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
-	if (!PyList_Check(ary)) return NULL;
+	if (!PyList_Check(ary)) {
+		PyErr_SetString(PyExc_ValueError, "points must be a list");
+		return NULL;
+	}
 
 	size_t len = PyList_Size(ary);
 	uint64_t i;
@@ -155,28 +168,16 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 		uint8_t j;
 		if (PyList_Check(current_pair))
 			current_pair = PyList_AsTuple(current_pair);
-		if (!PyTuple_Check(current_pair)) {
-			free(chunks);
-			return NULL;
-		}
-		if (PyTuple_Size(current_pair) != 2) {
-			free(chunks);
-			PyErr_SetString(PyExc_ValueError, "wrong number of coordinates");
-			return NULL;
-		}
+		if (!PyTuple_Check(current_pair)) goto points_error;
+		if (PyTuple_Size(current_pair) != 2) goto points_error;
+
 		for (j = 0; j < 2; j++) {
 			PyObject *current_coord = PyTuple_GetItem(current_pair, j);
-			if (!PyFloat_Check(current_coord)) {
-				free(chunks);
-				return NULL;
-			}
+			if (!PyFloat_Check(current_coord)) goto points_error;
+
 			double coord = PyFloat_AsDouble(current_coord);
-			if (-180.0 > coord || coord > 180.0) {
-				free(chunks);
-				PyErr_SetString(PyExc_ValueError,
-				                "coordinates must be between -180.0 and 180.0");
-				return NULL;
-			}
+			if (-180.0 > coord || coord > 180.0) goto points_error;
+
 			int64_t rounded_value = round(coord * precision_value);
 			int64_t delta = rounded_value - prev_pair[j];
 			prev_pair[j] = rounded_value;
@@ -190,6 +191,12 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	PyObject *polyline = PyUnicode_FromStringAndSize(chunks, chunks_index);
 	free(chunks);
 	return polyline;
+
+points_error:
+	PyErr_SetString(PyExc_ValueError,
+	                "points must be a list of (lat, lng) pairs");
+	free(chunks);
+	return NULL;
 }
 
 static PyMethodDef methods[] = {
