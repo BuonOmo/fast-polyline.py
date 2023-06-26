@@ -20,6 +20,10 @@ setup-clang:
 console:
 	python3 -ic 'import fast_polyline'
 
+.PHONY: lint
+lint:
+	python3 -m pylint *.py perf/*.py
+
 .PHONY: clean
 clean:
-	rm -rf build dist *.egg-info *.so
+	rm -rf build dist **/*.egg-info **/*.so

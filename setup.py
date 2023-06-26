@@ -1,13 +1,7 @@
-from distutils.core import setup, Extension
+"""
+Setup for the C extension binding.
+"""
 
-def main():
-    setup(name="fast_polyline",
-          version="1.0.0",
-          description="Fast & Easy Google Polylines",
-          author="Ulysse Buonomo",
-          license="MIT",
-          author_email="buonomo.ulysse@gmail.com",
-          ext_modules=[Extension("fast_polyline", sources=["src/polyline.c"])])
+from setuptools import setup, Extension
 
-if __name__ == "__main__":
-    main()
+setup(ext_modules=[Extension("fast_polyline", sources=["src/polyline.c"])])

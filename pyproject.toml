@@ -1,8 +1,11 @@
 [project]
 name = "fast_polyline"
 description = "Fast & Easy Google Polylines"
-authors = [{name ="Ulysse Buonomo"}]
+license = {text = "MIT"}
+authors = [{name = "Ulysse Buonomo", email = "buonomo.ulysse@gmail.com"}]
+keywords = ["compression", "geometry", "polyline"]
 version = "0.1.0"
+requires-python = ">=3.8"
 
 [project.optional-dependencies]
 dev = [
