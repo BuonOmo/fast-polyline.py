@@ -2,6 +2,10 @@
 install:
 	python3 -m pip install -e .[dev]
 
+.PHONY: bump
+bump:
+	@python3 -m commitizen  bump
+
 .PHONY: bench
 bench:
 	@python3 perf/benchmark.py
