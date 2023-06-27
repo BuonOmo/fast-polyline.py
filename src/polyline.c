@@ -21,8 +21,6 @@
 // for those lower precisions.
 #define MAX_ENCODED_CHUNKS(precision) (precision < 5 ? 5 : precision)
 
-#define DEFAULT_PRECISION 5
-
 // Already smaller than a sand grain. https://xkcd.com/2170/
 // In fact, at 15 precision, we can be sure there will be precision loss
 // in the C/Ruby value conversion. And 14 precision may be an edge case
@@ -78,11 +76,11 @@ static inline int _check_args(PyObject *args, const char *fmt, ...) {
 	return ret;
 }
 
-// polyline.decode(polyline, precision=5)
+// polyline.decode(polyline, precision)
 static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 	const char *polyline;
-	int precision = DEFAULT_PRECISION;
-	if (!_check_args(args, "s|i", &polyline, &precision)) return NULL;
+	int precision;
+	if (!_check_args(args, "si", &polyline, &precision)) return NULL;
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
 	PyObject *ary = PyList_New(0);
@@ -144,8 +142,8 @@ static inline uint8_t _polyline_encode_number(char *chunks, int64_t number) {
 static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	PyObject *ary;
 	// Dynamically checked for [0; 13] inclusion.
-	int precision = DEFAULT_PRECISION;
-	if (!_check_args(args, "O|i", &ary, &precision)) return NULL;
+	int precision;
+	if (!_check_args(args, "Oi", &ary, &precision)) return NULL;
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
 	if (!PyList_Check(ary)) {
@@ -198,11 +196,12 @@ points_error:
 	return NULL;
 }
 
-static PyMethodDef methods[] = {
-    {"decode", polyline_decode, METH_VARARGS, "Decode a polyline"},
-    {"encode", polyline_encode, METH_VARARGS, "Encode a polyline"},
-    {NULL, NULL, 0, NULL}};
+static PyMethodDef methods[] = {{"decode", polyline_decode, METH_VARARGS, ""},
+                                {"encode", polyline_encode, METH_VARARGS, ""},
+                                {NULL, NULL, 0, NULL}};
 
-static struct PyModuleDef module = {PyModuleDef_HEAD_INIT, "fast_polyline",
-                                    "Encode and decode polylines", -1, methods};
-PyMODINIT_FUNC PyInit_fast_polyline(void) { return PyModule_Create(&module); }
+static struct PyModuleDef module = {PyModuleDef_HEAD_INIT, "fast_polyline_ext",
+                                    "", -1, methods};
+PyMODINIT_FUNC PyInit_fast_polyline_ext(void) {
+	return PyModule_Create(&module);
+}
