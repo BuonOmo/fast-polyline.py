@@ -74,7 +74,7 @@ static inline int _check_args(PyObject *args, const char *fmt, ...) {
 	va_start(argp, fmt);
 	int ret = PyArg_VaParse(args, fmt, argp);
 	va_end(argp);
-	if (!ret) PyErr_SetString(PyExc_ValueError, "invalid arguments");
+	if (!ret) PyErr_SetString(PyExc_TypeError, "invalid arguments");
 	return ret;
 }
 
@@ -97,9 +97,8 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 		int64_t chunk = *polyline++;
 
 		if (chunk < 63 || chunk > 126) {
-			char buffer[64];
-			sprintf(buffer, "invalid character '%c'", (char)chunk);
-			PyErr_SetString(PyExc_ValueError, buffer);
+			PyErr_Format(PyExc_ValueError, "invalid character '%c'",
+			             (char)chunk);
 			return NULL;  // TODO: ensure that the objects we created will be
 			              // gc'd
 		}
@@ -150,7 +149,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
 	if (!PyList_Check(ary)) {
-		PyErr_SetString(PyExc_ValueError, "points must be a list");
+		PyErr_SetString(PyExc_TypeError, "points must be a list");
 		return NULL;
 	}
 
@@ -193,7 +192,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	return polyline;
 
 points_error:
-	PyErr_SetString(PyExc_ValueError,
+	PyErr_SetString(PyExc_TypeError,
 	                "points must be a list of (lat, lng) pairs");
 	free(chunks);
 	return NULL;
