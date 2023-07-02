@@ -18,7 +18,7 @@
 // An encoded number can have at most _precision_ characters. However,
 // it seems like we have a fuzzy behavior on low precisions. Hence a guard
 // for those lower precisions.
-#define MAX_ENCODED_CHUNKS(precision) (precision < 5 ? 5 : precision)
+#define MAX_ENCODED_CHUNKS(precision) (precision < 6 ? 6 : precision)
 
 // Already smaller than a sand grain. https://xkcd.com/2170/
 // In fact, at 15 precision, we can be sure there will be precision loss
@@ -155,8 +155,10 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	PyObject *current_pair;
 	int64_t prev_pair[2] = {0, 0};
 
-	char *chunks =
-	    malloc(MAX_ENCODED_CHUNKS(precision) * 2 * len * sizeof(char));
+	size_t alloc_size = MAX_ENCODED_CHUNKS(precision) * 2 * len;
+	dbg("allocated size: %u * 2 * %lu = %lu\n", MAX_ENCODED_CHUNKS(precision),
+	    len, alloc_size);
+	char *chunks = malloc(alloc_size * sizeof(char));
 	size_t chunks_index = 0;
 	dbg("ary.len: %lu\n", len);
 	for (i = 0; i < len; i++) {
@@ -169,9 +171,12 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 
 		for (j = 0; j < 2; j++) {
 			PyObject *current_coord = PyTuple_GetItem(current_pair, j);
-			if (!PyFloat_Check(current_coord)) goto points_error;
+			int is_float = PyFloat_Check(current_coord);
+			int is_long = PyLong_Check(current_coord);
+			if (!is_float && !is_long) goto points_error;
 
-			double coord = PyFloat_AsDouble(current_coord);
+			double coord = is_float ? PyFloat_AsDouble(current_coord)
+			                        : PyLong_AsDouble(current_coord);
 			if (-180.0 > coord || coord > 180.0) goto points_error;
 
 			int64_t rounded_value = round(coord * precision_value);
@@ -184,6 +189,8 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 		}
 	}
 
+	assert(chunks_index < alloc_size);
+	dbg("final chunks_index: %lu\n", chunks_index);
 	PyObject *polyline = PyUnicode_FromStringAndSize(chunks, chunks_index);
 	free(chunks);
 	return polyline;

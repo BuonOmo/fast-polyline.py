@@ -21,7 +21,7 @@ console: ext ## Runs the Python REPL with fast_polyline
 
 .PHONY: test
 test: ext ## Runs tests
-	python3 -m pytest
+	python3 -m pytest -q
 
 .PHONY: lint
 lint: ## Checks python syntax
