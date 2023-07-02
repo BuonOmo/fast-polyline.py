@@ -8,7 +8,6 @@
 
 /*
  * TODO: readme (.rst???)
- * TODO: inline documentation, however it works in C Python.
  * TODO: test
  *   - check that error messages are set.
  * TODO: offer merging with the existing polyline project
