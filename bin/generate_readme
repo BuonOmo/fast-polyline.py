@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import fast_polyline
+from string import Template
+import os
+
+here = os.path.abspath(os.path.dirname(__file__))
+
+computer_info=os.popen("sysctl machdep.cpu.brand_string | cut -d' ' -f2-").read().strip()
+bench_result=os.popen("make bench").read().replace("#", "###")
+
+
+import tomllib
+
+with open(os.path.join(here, "..", "pyproject.toml"), "rb") as f:
+    current_version=tomllib.load(f)['project']['version']
+
+with open(os.path.join(here, "resources", "README.md.in")) as f:
+	template = Template(f.read())
+
+result = template.substitute(
+	computer_info=computer_info,
+	bench_result=bench_result,
+	current_version=current_version
+)
+
+with open(os.path.join(here, "..", "README.md"), "w") as f:
+	f.write(result)

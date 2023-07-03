@@ -16,6 +16,7 @@ dev = [
 ]
 
 [tool.commitizen]
+gpg_sign = true
 name = "cz_conventional_commits"
 tag_format = "v$version"
 version_scheme = "semver"
