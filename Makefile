@@ -1,4 +1,5 @@
 ALL_TARGETS = $(wildcard src/*.c) pyproject.toml setup.py
+PYTHON = @python3
 
 ##@ Utility
 
@@ -17,28 +18,37 @@ help: ## Shows this help menu
 
 .PHONY: console
 console: ext ## Runs the Python REPL with fast_polyline
-	python3 -ic 'import fast_polyline'
+	$(PYTHON) -ic 'import fast_polyline'
 
 .PHONY: test
 test: ext ## Runs tests
-	python3 -m pytest -q
+	$(PYTHON) -m pytest -q
 
 .PHONY: lint
 lint: ## Checks python syntax
-	python3 -m pylint *.py perf/*.py
+	$(PYTHON) -m pylint *.py perf/*.py
 
 .PHONY: bench
 bench: ext ## Run the benchmark
-	@python3 perf/benchmark.py
+	$(PYTHON) perf/benchmark.py
+
+.PHONY: bump ## Bump version and update changelog
+bump:
+	$(PYTHON) -m commitizen bump
+
+README.md: bump bin/generate_readme bin/resources/README.md.in pyproject.toml perf/benchmark.py $(ALL_TARGETS)
+	bin/generate_readme
+	git add README.md
+	git commit --amend --no-edit
 
 .PHONY: publish
-publish: test ## Publish to pypi.org (TODO)
+publish: test README.md ## Publish to pypi.org (TODO)
 	@echo TODO
 
 ##@ C extension
 
 src/fast_polyline_ext.*.so: $(ALL_TARGETS)
-	python3 -m pip install -e .[dev]
+	$(PYTHON) -m pip install -e .[dev]
 
 .PHONY: ext
 ext: src/fast_polyline_ext.*.so ## Compiles the C extension

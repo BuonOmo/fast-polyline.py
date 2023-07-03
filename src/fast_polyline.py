@@ -19,7 +19,6 @@ encoded/decoded. It may be from 1 to 13 decimal digits. However,
 .. image:: https://imgs.xkcd.com/comics/coordinate_precision.png
         :alt: Coordinate Precision explained by XKC
 """
-
 import fast_polyline_ext
 
 def encode(coordinates, precision=5):

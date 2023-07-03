@@ -12,17 +12,17 @@ Up to 60x faster than the [polyline package][polyline].
 ### encode
 
 ```
-fast_polyline:	10.098ms
-polyline:	613.31ms
-fast_polyline is 60.7 times faster.
+fast_polyline:	10.606ms
+polyline:	613.5ms
+fast_polyline is 57.8 times faster.
 ```
 
 ### decode
 
 ```
-fast_polyline:	24.245ms
-polyline:	425.76ms
-fast_polyline is 17.6 times faster.
+fast_polyline:	23.447ms
+polyline:	425.96ms
+fast_polyline is 18.2 times faster.
 ```
 
 
@@ -35,7 +35,7 @@ pip install fast_polyline
 or in your `requirements.txt`:
 
 ```ruby
-fast_polyline~=0.1.0
+fast_polyline~=0.2.0
 ```
 
 ## Usage
