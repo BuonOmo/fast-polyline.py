@@ -83,11 +83,12 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
 	PyObject *ary = PyList_New(0);
+	if (ary == NULL) return NULL;
 	// Helps keeping track of whether we are computing lat (0) or lng (1).
 	uint8_t index = 0;
 	size_t shift = 0;
 	int64_t delta = 0;
-	PyObject *pair[2];
+	PyObject *pair[2] = {NULL, NULL};
 	double latlng[2] = {0.0, 0.0};
 	// Loops until end of string nul character is encountered.
 	while (*polyline) {
@@ -96,7 +97,8 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 		if (chunk < 63 || chunk > 126) {
 			PyErr_Format(PyExc_ValueError, "invalid character '%c'",
 			             (char)chunk);
-			Py_CLEAR(ary);
+			Py_XDECREF(pair[0]);
+			Py_DECREF(ary);
 			return NULL;
 		}
 
@@ -109,9 +111,25 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 			latlng[index] += delta;
 			pair[index] =
 			    PyFloat_FromDouble((double)latlng[index] / precision_value);
+			if (pair[index] == NULL) {
+				Py_XDECREF(pair[1 - index]);
+				Py_DECREF(ary);
+				return NULL;
+			}
 			// When both coordinates are parsed, we can push those to the result
 			// ary.
-			if (index) PyList_Append(ary, PyTuple_Pack(2, pair[0], pair[1]));
+			if (index) {
+				PyObject *point = PyTuple_Pack(2, pair[0], pair[1]);
+				Py_DECREF(pair[0]);
+				Py_DECREF(pair[1]);
+				pair[0] = pair[1] = NULL;
+				if (point == NULL || PyList_Append(ary, point) < 0) {
+					Py_XDECREF(point);
+					Py_DECREF(ary);
+					return NULL;
+				}
+				Py_DECREF(point);
+			}
 			// Reinitilize since we are done for current coordinate.
 			index = 1 - index;
 			delta = 0;
@@ -152,32 +170,54 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 
 	size_t len = PyList_Size(ary);
 	uint64_t i;
-	PyObject *current_pair;
 	int64_t prev_pair[2] = {0, 0};
 
-	size_t alloc_size = MAX_ENCODED_CHUNKS(precision) * 2 * len;
+	size_t chunk_size = (size_t)MAX_ENCODED_CHUNKS(precision) * 2;
+	if (len != 0 && chunk_size > SIZE_MAX / len) {
+		PyErr_SetString(PyExc_OverflowError, "points list too large to encode");
+		return NULL;
+	}
+	size_t alloc_size = chunk_size * len;
 	dbg("allocated size: %u * 2 * %lu = %lu\n", MAX_ENCODED_CHUNKS(precision),
 	    len, alloc_size);
-	char *chunks = malloc(alloc_size * sizeof(char));
+	char *chunks = alloc_size ? malloc(alloc_size * sizeof(char)) : NULL;
+	if (alloc_size && chunks == NULL) return PyErr_NoMemory();
 	size_t chunks_index = 0;
 	dbg("ary.len: %lu\n", len);
 	for (i = 0; i < len; i++) {
-		current_pair = PyList_GetItem(ary, i);
+		PyObject *current_pair = PyList_GetItem(ary, i);
+		PyObject *owned_tuple = NULL;
 		uint8_t j;
-		if (PyList_Check(current_pair))
-			current_pair = PyList_AsTuple(current_pair);
-		if (!PyTuple_Check(current_pair)) goto points_error;
-		if (PyTuple_Size(current_pair) != 2) goto points_error;
+		if (PyList_Check(current_pair)) {
+			owned_tuple = PyList_AsTuple(current_pair);
+			if (owned_tuple == NULL) goto error;
+			current_pair = owned_tuple;
+		}
+		if (!PyTuple_Check(current_pair) || PyTuple_Size(current_pair) != 2) {
+			Py_XDECREF(owned_tuple);
+			goto points_error;
+		}
 
 		for (j = 0; j < 2; j++) {
 			PyObject *current_coord = PyTuple_GetItem(current_pair, j);
 			int is_float = PyFloat_Check(current_coord);
 			int is_long = PyLong_Check(current_coord);
-			if (!is_float && !is_long) goto points_error;
+			if (!is_float && !is_long) {
+				Py_XDECREF(owned_tuple);
+				goto points_error;
+			}
 
 			double coord = is_float ? PyFloat_AsDouble(current_coord)
 			                        : PyLong_AsDouble(current_coord);
-			if (-180.0 > coord || coord > 180.0) goto points_error;
+			if (PyErr_Occurred()) {
+				Py_XDECREF(owned_tuple);
+				free(chunks);
+				return NULL;
+			}
+			if (-180.0 > coord || coord > 180.0) {
+				Py_XDECREF(owned_tuple);
+				goto points_error;
+			}
 
 			int64_t rounded_value = round(coord * precision_value);
 			int64_t delta = rounded_value - prev_pair[j];
@@ -187,6 +227,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 			chunks_index += _polyline_encode_number(
 			    chunks + chunks_index * sizeof(char), delta);
 		}
+		Py_XDECREF(owned_tuple);
 	}
 
 	assert(chunks_index < alloc_size);
@@ -198,6 +239,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 points_error:
 	PyErr_SetString(PyExc_TypeError,
 	                "points must be a list of (lat, lng) pairs");
+error:
 	free(chunks);
 	return NULL;
 }

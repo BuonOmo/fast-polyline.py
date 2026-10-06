@@ -6,22 +6,104 @@ from pytest import raises
 import fast_polyline as polyline
 
 
-def test_gc():
+def _assert_no_leaked_blocks(fn, iterations=10_000, tolerance=50):
+	"""Runs fn() `iterations` times and asserts that the number of
+	allocator blocks (sys.getallocatedblocks()) hasn't grown beyond a
+	small tolerance.
+
+	NOTE: gc.get_objects()/gc.collect() are NOT reliable here. CPython
+	can leave tuples made entirely of non-container, immutable items
+	(floats, ints, None, ...) untracked by the cyclic GC, so a C-level
+	refcount leak of such objects is invisible to gc.get_objects() even
+	though real memory is leaked. sys.getallocatedblocks() counts raw
+	pymalloc blocks and reliably reflects this kind of leak.
+	"""
 	import gc
+	import sys
 
 	_ = gc.collect()
-	before = len(gc.get_objects())
+	before = sys.getallocatedblocks()
 
-	for _ in range(100):
+	for _ in range(iterations):
+		fn()
+
+	_ = gc.collect()
+	after = sys.getallocatedblocks()
+
+	assert after <= (before + tolerance), (
+		f'Allocated block count grew from {before} to {after} over {iterations} '
+		'iterations; objects were not released'
+	)
+
+
+def test_no_leak_decode_error():
+	def run():
 		with raises(ValueError, match="invalid character '='"):
 			polyline.decode('gu`wFnfys@???nKgE??gE?????oK????fE??fE=')
 
-	_ = gc.collect()
-	after = len(gc.get_objects())
+	_assert_no_leaked_blocks(run)
 
-	assert after <= before, (
-		f'Object count grew from {before} to {after}; objects were not garbage collected'
-	)
+
+def test_no_leak_encode_error():
+	bad_points = [
+		(40.641, -8.654),
+		(40.641, -8.654),
+		(40.641, -8.656),
+		(40.642, -8.656),
+		(40.642, -8.655),
+		(40.642, -8.655),
+		(40.642, -8.655),
+		(1, None),
+	]
+
+	def run():
+		with raises(TypeError, match=r'points must be a list of \(lat, lng\) pairs'):
+			polyline.encode(bad_points)
+
+	_assert_no_leaked_blocks(run)
+
+
+def test_no_leak_decode_success():
+	def run():
+		d = polyline.decode('gu`wFnfys@???nKgE??gE?????oK????fE??fE')
+		assert len(d) == 12
+
+	_assert_no_leaked_blocks(run)
+
+
+def test_no_leak_encode_success():
+	points = [
+		(40.641, -8.654),
+		(40.641, -8.654),
+		(40.641, -8.656),
+		(40.642, -8.656),
+	]
+
+	def run():
+		e = polyline.encode(points)
+		assert isinstance(e, str)
+
+	_assert_no_leaked_blocks(run)
+
+
+def test_no_leak_encode_list_of_lists():
+	points = [[40.641, -8.654], [40.641, -8.656], [40.642, -8.656]]
+
+	def run():
+		e = polyline.encode(points)
+		assert isinstance(e, str)
+
+	_assert_no_leaked_blocks(run)
+
+
+def test_no_leak_encode_list_of_lists_error():
+	bad_points = [[40.641, -8.654], [1, None]]
+
+	def run():
+		with raises(TypeError, match=r'points must be a list of \(lat, lng\) pairs'):
+			polyline.encode(bad_points)
+
+	_assert_no_leaked_blocks(run)
 
 
 def test_decode_multiple_points():
@@ -157,6 +239,27 @@ def test_encode_single_point_precision():
 
 	e = polyline.encode([(40.6411233123, -8.6533214234)], 6)
 	assert e == 'eepolAp_doO'
+
+
+def test_encode_accepts_list_of_lists():
+	tuples = [(40.641, -8.654), (40.641, -8.656), (40.642, -8.656)]
+	lists = [list(p) for p in tuples]
+
+	assert polyline.encode(lists) == polyline.encode(tuples)
+
+
+def test_encode_integer_coordinates():
+	assert polyline.encode([(40, -8), (41, -9)]) == polyline.encode(
+		[(40.0, -8.0), (41.0, -9.0)]
+	)
+
+
+def test_encode_empty_list():
+	assert polyline.encode([]) == ''
+
+
+def test_decode_empty_string():
+	assert polyline.decode('') == []
 
 
 def test_a_variety_of_precisions():
