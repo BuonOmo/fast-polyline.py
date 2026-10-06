@@ -8,21 +8,20 @@ Up to 60x faster than the [polyline package][polyline].
 
 `make bench` made on a Apple M1 computer.
 
-
 ### encode
 
 ```
-fast_polyline:	10.606ms
-polyline:	613.5ms
-fast_polyline is 57.8 times faster.
+fast_polyline:	22.303ms
+polyline:	558.79ms
+fast_polyline is 25.1 times faster.
 ```
 
 ### decode
 
 ```
-fast_polyline:	23.447ms
-polyline:	425.96ms
-fast_polyline is 18.2 times faster.
+fast_polyline:	20.275ms
+polyline:	360.7ms
+fast_polyline is 17.8 times faster.
 ```
 
 
