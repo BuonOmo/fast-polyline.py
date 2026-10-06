@@ -1,7 +1,27 @@
-from random import uniform, randint
 import time
+from random import randint, uniform
+
+from pytest import raises
 
 import fast_polyline as polyline
+
+
+def test_gc():
+    import gc
+
+    _ = gc.collect()
+    before = len(gc.get_objects())
+
+    for _ in range(100):
+        with raises(ValueError, match="invalid character '='"):
+            polyline.decode('gu`wFnfys@???nKgE??gE?????oK????fE??fE=')
+
+    _ = gc.collect()
+    after = len(gc.get_objects())
+
+    assert after <= before, (
+        f'Object count grew from {before} to {after}; objects were not garbage collected'
+    )
 
 
 def test_decode_multiple_points():

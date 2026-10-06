@@ -96,8 +96,8 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 		if (chunk < 63 || chunk > 126) {
 			PyErr_Format(PyExc_ValueError, "invalid character '%c'",
 			             (char)chunk);
-			return NULL;  // TODO: ensure that the objects we created will be
-			              // gc'd
+			Py_CLEAR(ary);
+			return NULL;
 		}
 
 		chunk -= 63;
