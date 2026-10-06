@@ -32,8 +32,8 @@ lint: ## Checks python syntax
 bench: ext ## Run the benchmark
 	$(PYTHON) perf/benchmark.py
 
-.PHONY: bump ## Bump version and update changelog
-bump:
+.PHONY: bump
+bump: ## Bump version and update changelog
 	$(PYTHON) -m commitizen bump
 
 README.md: bump bin/generate_readme bin/resources/README.md.in pyproject.toml perf/benchmark.py $(ALL_TARGETS)
@@ -42,8 +42,10 @@ README.md: bump bin/generate_readme bin/resources/README.md.in pyproject.toml pe
 	git commit --amend --no-edit
 
 .PHONY: publish
-publish: test README.md ## Publish to pypi.org (TODO)
-	@echo TODO
+publish: test README.md ## Publish to pypi.org
+	$(PYTHON) -m pip install --upgrade build twine
+	$(PYTHON) -m build
+	$(PYTHON) -m twine upload dist/*
 
 ##@ C extension
 

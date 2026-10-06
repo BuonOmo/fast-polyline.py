@@ -1,19 +1,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <stdint.h>
 
-/* # Resources
- *
- * [Python C-API reference](https://docs.python.org/3/c-api/index.html).
- */
-
-/*
- * TODO: readme (.rst???)
- * TODO: test
- *   - check that error messages are set.
- * TODO: offer merging with the existing polyline project
- *   https://github.com/frederickjansen/polyline/issues/14
- * TODO: choose final naming (- or _ depending on how they do in python)
- */
+/* TODO: https://packaging.python.org/en/latest/tutorials/packaging-projects/ */
 
 // An encoded number can have at most _precision_ characters. However,
 // it seems like we have a fuzzy behavior on low precisions. Hence a guard

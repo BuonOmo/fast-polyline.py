@@ -4,7 +4,7 @@ description = "Fast & Easy Google Polylines"
 license = {text = "MIT"}
 authors = [{name = "Ulysse Buonomo", email = "buonomo.ulysse@gmail.com"}]
 keywords = ["compression", "geometry", "polyline"]
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
@@ -15,6 +15,10 @@ dev = [
     "pytest-codspeed~=5.0",
     "commitizen~=3.5"
 ]
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
 
 [tool.commitizen]
 gpg_sign = true

@@ -1,3 +1,14 @@
+## v0.3.0 (2026-10-06)
+
+### Feat
+
+- regenerate readme
+
+### Fix
+
+- avoid many leaks
+- avoid leak on invalid character
+
 ## v0.2.0 (2023-07-03)
 
 ### Feat
