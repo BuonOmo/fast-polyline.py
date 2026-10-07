@@ -1,16 +1,21 @@
 """
 Benchmark to compare with existing libraries.
 """
+
 import sys
 import timeit
 
 import polyline
+import polyline_rs
 
 import fast_polyline
 
-POLYLINE = "{leiHkmjM}z@vcE~JlKx@b~A~Jpy@vv@bhArLpVxFta@sCjEbL~c@rEn{@_HzXj" \
-           "EdUg@rfCbHbSp\\fKpQzSg@|fCxTfvAzZduEyC|z@al@l~BcOnzBr@jUfuDfgFf" \
-           "xAbzA~HxUfKcE_B}YbEyWti@_rAr`AhNte@x]dLyk@|Vyd@"
+# fmt: off
+POLYLINE = (
+	'{leiHkmjM}z@vcE~JlKx@b~A~Jpy@vv@bhArLpVxFta@sCjEbL~c@rEn{@_HzXj'
+	'EdUg@rfCbHbSp\\fKpQzSg@|fCxTfvAzZduEyC|z@al@l~BcOnzBr@jUfuDfgFf'
+	'xAbzA~HxUfKcE_B}YbEyWti@_rAr`AhNte@x]dLyk@|Vyd@'
+)
 POINTS = [
 	(48.85726, 2.35238), (48.86685, 2.3209), (48.86493, 2.31891),
 	(48.86464, 2.30369), (48.86272, 2.29432), (48.8538, 2.28262),
@@ -25,6 +30,8 @@ POINTS = [
 	(48.78763, 2.06262), (48.77713, 2.06017), (48.77094, 2.05524),
 	(48.76883, 2.06241), (48.765, 2.06846)
 ]
+# fmt: on
+
 
 def bench(title, method, arg):
 	"""
@@ -36,16 +43,23 @@ def bench(title, method, arg):
 	else:
 		print(f'\n# {title}\n')
 
-	fp_ms = 1_000 * timeit.timeit(lambda: getattr(fast_polyline, method)(arg), number=10_000)
+	fp_ms = 1_000 * timeit.timeit(
+		lambda: getattr(fast_polyline, method)(arg), number=10_000
+	)
 	p_ms = 1_000 * timeit.timeit(lambda: getattr(polyline, method)(arg), number=10_000)
+	prs_ms = 1_000 * timeit.timeit(
+		lambda: getattr(polyline_rs, method + '_latlon')(arg), number=10_000
+	)
 
 	if not is_tty:
 		print('```')
 	print(f'fast_polyline:\t{fp_ms:.5}ms')
+	print(f'polyline-rs:\t{prs_ms:.5}ms')
 	print(f'polyline:\t{p_ms:.5}ms')
 	print(f'fast_polyline is {p_ms / fp_ms:.3} times faster.')
 	if not is_tty:
 		print('```')
+
 
 if __name__ == '__main__':
 	bench('encode', 'encode', POINTS)

@@ -36,13 +36,11 @@ bench: ext ## Run the benchmark
 bump: ## Bump version and update changelog
 	$(PYTHON) -m commitizen bump
 
-README.md: bump bin/generate_readme bin/resources/README.md.in pyproject.toml perf/benchmark.py $(ALL_TARGETS)
+README.md: bin/generate_readme bin/resources/README.md.in pyproject.toml perf/benchmark.py $(ALL_TARGETS)
 	bin/generate_readme
-	git add README.md
-	git commit --amend --no-edit
 
 .PHONY: publish
-publish: test README.md ## Publish to pypi.org
+publish: bump test README.md ## Publish to pypi.org
 	$(PYTHON) -m pip install --upgrade build twine
 	$(PYTHON) -m build
 	$(PYTHON) -m twine upload dist/*
@@ -50,7 +48,7 @@ publish: test README.md ## Publish to pypi.org
 ##@ C extension
 
 src/fast_polyline_ext.*.so: $(ALL_TARGETS)
-	$(PYTHON) -m pip install -e .[dev]
+	$(PYTHON) -m pip install -e .[dev] -q
 
 .PHONY: ext
 ext: src/fast_polyline_ext.*.so ## Compiles the C extension

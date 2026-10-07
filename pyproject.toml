@@ -10,6 +10,7 @@ requires-python = ">=3.8"
 [project.optional-dependencies]
 dev = [
     "polyline~=2.0",
+    "polyline-rs~=1.5",
     "pylint~=2.17",
     "pytest~=7.4",
     "pytest-codspeed~=5.0",
