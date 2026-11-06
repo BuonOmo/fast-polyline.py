@@ -1,5 +1,7 @@
 # Fast Polylines
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/BuonOmo/fast-polyline.py?utm_source=badge)
+
 Implementation of the [Google polyline algorithm][algorithm].
 
 Up to 60x faster than the [polyline package][polyline].

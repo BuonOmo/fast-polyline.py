@@ -12,6 +12,7 @@ dev = [
     "polyline~=2.0",
     "pylint~=2.17",
     "pytest~=7.4",
+    "pytest-codspeed~=5.0",
     "commitizen~=3.5"
 ]
 
