@@ -71,8 +71,24 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 	if (!_check_args(args, "si", &polyline, &precision)) return NULL;
 	if (!_check_precision(precision)) return NULL;
 	double precision_value = _fast_pow10(precision);
-	PyObject *ary = PyList_New(0);
+
+	// Count how many (lat, lng) pairs this polyline will decode into, so the
+	// result list can be allocated exactly once instead of growing it (and
+	// potentially reallocating/copying its backing array) via repeated
+	// PyList_Append calls below. A number ends on a byte whose continuation
+	// bit (0x20) is unset, and a pair needs two such numbers. Any bytes past
+	// the first invalid character can only inflate this count (never make it
+	// undercount what the parser below will actually produce before it
+	// bails out on that same invalid character), so it's always a safe
+	// upper bound, and an exact count for well-formed input.
+	size_t num_count = 0;
+	for (const unsigned char *p = (const unsigned char *)polyline; *p; p++) {
+		if (!((*p - 63) & 0x20)) num_count++;
+	}
+	Py_ssize_t num_pairs = (Py_ssize_t)(num_count / 2);
+	PyObject *ary = PyList_New(num_pairs);
 	if (ary == NULL) return NULL;
+	Py_ssize_t pair_count = 0;
 	// Helps keeping track of whether we are computing lat (0) or lng (1).
 	uint8_t index = 0;
 	size_t shift = 0;
@@ -87,6 +103,8 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 			PyErr_Format(PyExc_ValueError, "invalid character '%c'",
 			             (char)chunk);
 			Py_XDECREF(pair[0]);
+			// ary may still have unfilled (NULL) slots past pair_count; that's
+			// fine, list deallocation already Py_XDECREFs every slot safely.
 			Py_DECREF(ary);
 			return NULL;
 		}
@@ -108,16 +126,22 @@ static PyObject *polyline_decode(PyObject *self, PyObject *args) {
 			// When both coordinates are parsed, we can push those to the result
 			// ary.
 			if (index) {
-				PyObject *point = PyTuple_Pack(2, pair[0], pair[1]);
-				Py_DECREF(pair[0]);
-				Py_DECREF(pair[1]);
-				pair[0] = pair[1] = NULL;
-				if (point == NULL || PyList_Append(ary, point) < 0) {
-					Py_XDECREF(point);
+				PyObject *point = PyTuple_New(2);
+				if (point == NULL) {
+					Py_DECREF(pair[0]);
+					Py_DECREF(pair[1]);
 					Py_DECREF(ary);
 					return NULL;
 				}
-				Py_DECREF(point);
+				// PyTuple_SET_ITEM steals the reference, avoiding the extra
+				// incref/decref pair that PyTuple_Pack would otherwise cost.
+				PyTuple_SET_ITEM(point, 0, pair[0]);
+				PyTuple_SET_ITEM(point, 1, pair[1]);
+				pair[0] = pair[1] = NULL;
+				// ary was preallocated with num_pairs (NULL) slots above, and
+				// pair_count never exceeds num_pairs, so this is safe and
+				// steals the reference without bounds-checking overhead.
+				PyList_SET_ITEM(ary, pair_count++, point);
 			}
 			// Reinitilize since we are done for current coordinate.
 			index = 1 - index;
@@ -174,37 +198,47 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 	size_t chunks_index = 0;
 	dbg("ary.len: %lu\n", len);
 	for (i = 0; i < len; i++) {
-		PyObject *current_pair = PyList_GetItem(ary, i);
-		PyObject *owned_tuple = NULL;
+		// ary was already confirmed to be a list and i < len, so this is
+		// safe and skips PyList_GetItem's redundant bounds check.
+		PyObject *current_pair = PyList_GET_ITEM(ary, i);
 		uint8_t j;
-		if (PyList_Check(current_pair)) {
-			owned_tuple = PyList_AsTuple(current_pair);
-			if (owned_tuple == NULL) goto error;
-			current_pair = owned_tuple;
-		}
-		if (!PyTuple_Check(current_pair) || PyTuple_Size(current_pair) != 2) {
-			Py_XDECREF(owned_tuple);
+		// PySequence_Fast only copies into a new list when current_pair isn't
+		// already a list/tuple; for the common list-of-lists/tuples inputs it
+		// just returns a new reference to the same object, unlike the
+		// previous PyList_AsTuple() call which always allocated a fresh
+		// 2-item tuple for list inputs.
+		PyObject *fast_pair = PySequence_Fast(
+		    current_pair, "points must be a list of (lat, lng) pairs");
+		if (fast_pair == NULL) goto error;
+		if (PySequence_Fast_GET_SIZE(fast_pair) != 2) {
+			Py_DECREF(fast_pair);
 			goto points_error;
 		}
 
 		for (j = 0; j < 2; j++) {
-			PyObject *current_coord = PyTuple_GetItem(current_pair, j);
+			PyObject *current_coord = PySequence_Fast_GET_ITEM(fast_pair, j);
 			int is_float = PyFloat_Check(current_coord);
 			int is_long = PyLong_Check(current_coord);
 			if (!is_float && !is_long) {
-				Py_XDECREF(owned_tuple);
+				Py_DECREF(fast_pair);
 				goto points_error;
 			}
 
-			double coord = is_float ? PyFloat_AsDouble(current_coord)
-			                        : PyLong_AsDouble(current_coord);
-			if (PyErr_Occurred()) {
-				Py_XDECREF(owned_tuple);
-				free(chunks);
-				return NULL;
+			double coord;
+			if (is_float) {
+				// current_coord is already confirmed to be a float, so read it
+				// directly instead of paying for PyFloat_AsDouble's checks.
+				coord = PyFloat_AS_DOUBLE(current_coord);
+			} else {
+				coord = PyLong_AsDouble(current_coord);
+				if (coord == -1.0 && PyErr_Occurred()) {
+					Py_DECREF(fast_pair);
+					free(chunks);
+					return NULL;
+				}
 			}
 			if (-180.0 > coord || coord > 180.0) {
-				Py_XDECREF(owned_tuple);
+				Py_DECREF(fast_pair);
 				goto points_error;
 			}
 
@@ -216,7 +250,7 @@ static PyObject *polyline_encode(PyObject *self, PyObject *args) {
 			chunks_index += _polyline_encode_number(
 			    chunks + chunks_index * sizeof(char), delta);
 		}
-		Py_XDECREF(owned_tuple);
+		Py_DECREF(fast_pair);
 	}
 
 	assert(chunks_index < alloc_size);

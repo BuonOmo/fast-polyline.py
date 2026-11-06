@@ -14,19 +14,19 @@ Up to 60x faster than the [polyline package][polyline].
 ### encode
 
 ```
-fast_polyline:	16.551ms
-polyline-rs:	33.595ms
-polyline:	729.04ms
-fast_polyline is 44.0 times faster.
+fast_polyline:	11.942ms
+polyline-rs:	21.811ms
+polyline:	564.29ms
+fast_polyline is 47.3 times faster.
 ```
 
 ### decode
 
 ```
-fast_polyline:	31.935ms
-polyline-rs:	31.891ms
-polyline:	515.52ms
-fast_polyline is 16.1 times faster.
+fast_polyline:	20.599ms
+polyline-rs:	23.88ms
+polyline:	361.87ms
+fast_polyline is 17.6 times faster.
 ```
 
 
