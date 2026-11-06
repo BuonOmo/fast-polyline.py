@@ -47,5 +47,6 @@ def bench(title, method, arg):
 	if not is_tty:
 		print('```')
 
-bench('encode', 'encode', POINTS)
-bench('decode', 'decode', POLYLINE)
+if __name__ == '__main__':
+	bench('encode', 'encode', POINTS)
+	bench('decode', 'decode', POLYLINE)

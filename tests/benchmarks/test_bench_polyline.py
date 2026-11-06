@@ -4,19 +4,18 @@ CodSpeed benchmarks for fast_polyline.
 Run locally with `pytest tests/benchmarks --codspeed`.
 """
 
+import sys
+from pathlib import Path
 from random import Random
 
 import pytest
 
 import fast_polyline
 
-# Route through Paris, also used in perf/benchmark.py.
-PARIS_POLYLINE = (
-	'{leiHkmjM}z@vcE~JlKx@b~A~Jpy@vv@bhArLpVxFta@sCjEbL~c@rEn{@_HzXj'
-	'EdUg@rfCbHbSp\\fKpQzSg@|fCxTfvAzZduEyC|z@al@l~BcOnzBr@jUfuDfgFf'
-	'xAbzA~HxUfKcE_B}YbEyWti@_rAr`AhNte@x]dLyk@|Vyd@'
-)
-PARIS_POINTS = fast_polyline.decode(PARIS_POLYLINE)
+# Reuse the Paris route from the comparison benchmark in perf/benchmark.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from perf.benchmark import POINTS as PARIS_POINTS  # noqa: E402
+from perf.benchmark import POLYLINE as PARIS_POLYLINE  # noqa: E402
 
 OFFICIAL_POINTS = [(38.5, -120.2), (40.7, -120.95), (43.252, -126.453)]
 OFFICIAL_POLYLINE = '_p~iF~ps|U_ulLnnqC_mqNvxq`@'
